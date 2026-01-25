@@ -59,7 +59,7 @@ def main(args):
         audio_batch = audio_batch.cpu().numpy()
 
         for j, sample in tqdm(enumerate(audio_batch)):
-            filename = f"generated_{i + j}.wav"
+            filename = f"generated_{i + j}.mp3"
             filepath = os.path.join(output_dir, filename)
             sf.write(filepath,
                      sample,
