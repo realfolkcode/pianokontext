@@ -1,6 +1,6 @@
 import os
 import argparse
-import wandb
+import comet_ml
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -28,9 +28,9 @@ def main(args):
     config = load_config(config_path)
 
     if project_name is not None:
-        wandb.login()
-        wandb.init(project=project_name)
-        metrics_logger = wandb.log
+        comet_ml.login()
+        exp = comet_ml.start(project_name=project_name)
+        metrics_logger = exp.log_metrics
     else:
         metrics_logger = None
 
@@ -106,6 +106,9 @@ def main(args):
                           metrics_logger=metrics_logger)
     trainer.train(sit,
                   ema=ema)
+
+    if project_name is not None:
+        exp.end()
 
 
 if __name__ == "__main__":

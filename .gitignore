@@ -21,6 +21,7 @@ checkpoints/
 configs/
 tmp_gradio/
 figures/
+audio_examples/
 
 # User-specific files
 *.rsuser
