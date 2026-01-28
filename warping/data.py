@@ -1,7 +1,7 @@
 import os
 import torch
 from torch.utils.data import Dataset
-from typing import List
+from typing import List, Dict
 from copy import deepcopy
 
 
