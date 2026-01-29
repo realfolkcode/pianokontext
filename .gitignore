@@ -22,7 +22,8 @@ configs/
 tmp_gradio/
 figures/
 audio_examples/
-data_stats/
+expressive_data_stats/
+deadpan_data_stats/
 
 # User-specific files
 *.rsuser
