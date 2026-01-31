@@ -6,6 +6,27 @@ from functools import partial
 
 ## using alpha(t) = (1-t) and beta(t) = t
 class DeterministicInterpolant:
+    def __init__(self,
+                 train_stats: Dict | None = None,
+                 device: str = 'cpu'):
+        """Initializes an instance of DeterministicInterpolant.
+        
+        Args:
+            train_stats: Dictionary with entries `mean` and `std`.
+            device: Device.
+        """
+        self.device = device
+
+        if train_stats is not None:
+            x_mean = train_stats["mean"]
+            x_std = train_stats["std"]
+        else:
+            x_mean = 0.
+            x_std = 1.
+        
+        self.x_mean = torch.tensor(x_mean, device=device)
+        self.x_std = torch.tensor(x_std, device=device)
+
     def alpha(self,
               t: float) -> float:
         """Computes alpha coef at time t."""
@@ -25,6 +46,16 @@ class DeterministicInterpolant:
                 t: float) -> float:
         """Computes derivative of beta wrt time t."""
         return 1.0 + 0*t
+
+    def _normalize(self,
+                   x: torch.Tensor) -> torch.Tensor:
+        """Normalizes a sample."""
+        return (x - self.x_mean) / (self.x_std + 1e-6)
+
+    def _unnormalize(self,
+                     x: torch.Tensor) -> torch.Tensor:
+        """Unnormalizes a sample."""
+        return x * (self.x_std + 1e-6) + self.x_mean
     
     def _single_xt(self,
                    x0: torch.Tensor,
@@ -40,7 +71,8 @@ class DeterministicInterpolant:
         Returns:
             Interpolated sample of shape (seq_len, D).
         """
-        return self.alpha(t) * x0 + self.beta(t) * x1
+        x1_normed = self._normalize(x1)
+        return self.alpha(t) * x0 + self.beta(t) * x1_normed
     
     def _single_dtxt(self,
                      x0: torch.Tensor,
@@ -56,7 +88,8 @@ class DeterministicInterpolant:
         Returns:
             The vector field of shape (seq_len, D).
         """
-        return self.dotalpha(t) * x0 + self.dotbeta(t) * x1
+        x1_normed = self._normalize(x1)
+        return self.dotalpha(t) * x0 + self.dotbeta(t) * x1_normed
     
     def xt(self,
            x0: torch.Tensor,
