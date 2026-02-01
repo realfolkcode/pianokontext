@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
 
+from .interpolant import DeterministicInterpolant
+
 
 @torch.no_grad()
 def denoise_latent(model: nn.Module,
+                   interpolant: DeterministicInterpolant,
                    seq_len: int,
                    device: str,
                    batch_size: int = 1,
@@ -15,6 +18,7 @@ def denoise_latent(model: nn.Module,
     
     Args:
         model: Flow matching model.
+        interpolant: Flow interpolant.
         seq_len: Sequence length.
         device: Device.
         batch_size: Batch size.
@@ -35,6 +39,7 @@ def denoise_latent(model: nn.Module,
         v_next = model(x + v * dt, t + dt)
         x = x + (v + v_next) * dt / 2
     
+    x = interpolant._unnormalize(x)
     x = torch.transpose(x, 1, 2)
     
     return x
