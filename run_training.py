@@ -104,7 +104,7 @@ def main(args):
                           num_epochs=num_epochs,
                           device=device,
                           scheduler=scheduler,
-                          verbose=100,
+                          verbose=50,
                           checkpoint_path=checkpoint_path,
                           metrics_logger=metrics_logger)
     trainer.train(sit,

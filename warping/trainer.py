@@ -168,11 +168,11 @@ class FlowTrainer:
                 print(f"{i} Train loss: {train_loss}")
                 print(f"{i} Validation loss: {val_loss}")
             
-            if self.metrics_logger is not None:
-                logging_dict = {"train_loss": train_loss,
-                                "val_loss": val_loss}
-                self.metrics_logger(logging_dict,
-                                    epoch=i)
+                if self.metrics_logger is not None:
+                    logging_dict = {"train_loss": train_loss,
+                                    "val_loss": val_loss}
+                    self.metrics_logger(logging_dict,
+                                        epoch=i)
 
         print(f"Saving the model into {self.checkpoint_path}")
         checkpoint = {"model": model.state_dict()}
