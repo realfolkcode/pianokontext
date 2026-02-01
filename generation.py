@@ -20,6 +20,7 @@ def main(args):
     num_samples = args.num_samples
     num_steps = args.num_steps
     config_path = args.config_path
+    stats_path = args.stats_path
     checkpoint_dir = args.checkpoint_dir
 
     config = load_config(config_path)
@@ -37,6 +38,10 @@ def main(args):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    data_stats = load_json(stats_path)
+    interpolant = DeterministicInterpolant(train_stats=data_stats,
+                                           device=device)
+
     sit = prepare_sit_from_config(config=config,
                                   device=device)
     sit.load_state_dict(torch.load(checkpoint_path)[is_ema], strict=False)
@@ -51,6 +56,7 @@ def main(args):
         batch_size = min(batch_size, num_samples - i)
 
         x = denoise_latent(model=sit,
+                           interpolant=interpolant,
                            seq_len=seq_len,
                            device=device,
                            batch_size=batch_size,
@@ -74,6 +80,7 @@ if __name__ ==  "__main__":
     parser.add_argument('--num_samples', type=int, required=True, default=10, help='number of samples to generate')
     parser.add_argument('--num_steps', type=int, required=True, default=64, help='number of inference steps')
     parser.add_argument('--config_path', type=str, required=True, default=None, help='path to yaml config')
+    parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')    
     parser.add_argument('--checkpoint_dir', type=str, required=True, default=None, help='directory to store checkpoints')
     
     args = parser.parse_args()
