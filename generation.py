@@ -61,6 +61,8 @@ def main(args):
                            device=device,
                            batch_size=batch_size,
                            num_steps=num_steps)
+        
+        x = torch.transpose(x, 1, 2)
         audio_batch = encdec.decode(x)
         audio_batch = audio_batch.cpu().numpy()
 

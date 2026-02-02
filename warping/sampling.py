@@ -26,7 +26,7 @@ def denoise_latent(model: nn.Module,
         num_steps: The number of ODE steps.
     
     Returns:
-        Latent code of shape (B, dim, seq_len).
+        Latent code of shape (B, seq_len, dim).
     """
     model.eval()
 
@@ -39,9 +39,7 @@ def denoise_latent(model: nn.Module,
         v_next = model(x + v * dt, t + dt)
         x = x + (v + v_next) * dt / 2
     
-    x = interpolant._unnormalize(x)
-    x = torch.transpose(x, 1, 2)
-    
+    x = interpolant._unnormalize(x) 
     return x
 
 
@@ -59,7 +57,7 @@ def solve_ode(model: nn.Module,
         time_grid: Time grid of shape (num_steps).
     
     Returns:
-        Latent code of shape (B, dim, seq_len).
+        Latent code of shape (B, seq_len, dim).
     """
     model.eval()
     x = x_init.clone()
@@ -71,23 +69,28 @@ def solve_ode(model: nn.Module,
         v_next = model(x + v * dt, t + dt)
         x = x + (v + v_next) * dt / 2
     
-    x = torch.transpose(x, 1, 2)
-    
     return x
 
 
 class DualBridge:
     def __init__(self,
                  encoder: nn.Module,
-                 decoder: nn.Module):
+                 decoder: nn.Module,
+                 interpolant_enc: DeterministicInterpolant,
+                 interpolant_dec: DeterministicInterpolant):
         """Initializes an instance of DualBridge.
         
         Args:
             encoder: Flow matching model that encodes sample.
             decoder: Flow matching model that decodes sample.
+            interpolant_enc: Flow interpolant for encoder.
+            interpolant_dec: Flow interpolant for decoder.
         """
         self.encoder = encoder
         self.decoder = decoder
+
+        self.interpolant_enc = interpolant_enc
+        self.interpolant_dec = interpolant_dec
     
     def translate_sample(self,
                          x: torch.Tensor,
@@ -105,14 +108,15 @@ class DualBridge:
               (B, seq_len, D).
         """
         t_space = torch.linspace(1, 0, num_steps + 1)[:-1].to(x.device)
+        x0 = self.interpolant_enc._normalize(x)
         x0 = solve_ode(model=self.encoder,
-                       x_init=x,
+                       x_init=x0,
                        time_grid=t_space)
-        x0 = torch.transpose(x0, 1, 2)  
     
         t_space = torch.linspace(0, 1, num_steps + 1)[:-1].to(x.device)
         x1_rec = solve_ode(model=self.decoder,
                            x_init=x0,
                            time_grid=t_space)
+        x1_rec = self.interpolant_dec._unnormalize(x1_rec)
         
         return x1_rec
