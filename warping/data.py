@@ -32,7 +32,7 @@ class EmbeddingDataset(Dataset):
         if self.is_cache and idx in self.cached_samples:
             sample = self.cached_samples[idx]
         else:    
-            filepath = self.emb_path_lst[idx]
+            filepath = self.emb_dict_lst[idx]["filepath"]
             sample = self._load_sample(filepath)
         
         if self.is_cache and idx not in self.cached_samples:

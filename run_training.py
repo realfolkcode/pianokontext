@@ -5,8 +5,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
-from tqdm import tqdm
-from typing import List, Dict
 from copy import deepcopy
 
 from warping.utils import load_json, prepare_filepaths_from_metadata, \
@@ -15,11 +13,9 @@ from warping.data import EmbeddingDataset
 from warping.interpolant import DeterministicInterpolant
 from warping.sit import prepare_sit_from_config
 from warping.trainer import FlowTrainer, update_ema, requires_grad
-from warping.sampling import denoise_latent
 
 
 def main(args):
-    emb_root_dir = args.data_dir
     metadata_path = args.metadata_path
     stats_path = args.stats_path
     project_name = args.project_name
@@ -48,17 +44,15 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     metadata = load_json(metadata_path)
-    train_path_lst = prepare_filepaths_from_metadata(metadata,
-                                                     emb_root_dir=emb_root_dir,
+    train_dict_lst = prepare_filepaths_from_metadata(metadata,
                                                      split='train')
-    val_path_lst = prepare_filepaths_from_metadata(metadata,
-                                                   emb_root_dir=emb_root_dir,
+    val_dict_lst = prepare_filepaths_from_metadata(metadata,
                                                    split='validation')
 
-    train_dataset = EmbeddingDataset(emb_path_lst=train_path_lst,
+    train_dataset = EmbeddingDataset(emb_dict_lst=train_dict_lst,
                                      is_cache=True,
                                      seq_len=seq_len)
-    val_dataset = EmbeddingDataset(emb_path_lst=val_path_lst,
+    val_dataset = EmbeddingDataset(emb_dict_lst=val_dict_lst,
                                    is_cache=True,
                                    seq_len=seq_len)
     
@@ -116,7 +110,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, required=True, help='directory with embeddings')
     parser.add_argument('--metadata_path', type=str, required=True, help='path to audio dataset metadata')
     parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')
     parser.add_argument('--project_name', type=str, required=False, default=None, help='wandb project name')

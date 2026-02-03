@@ -1,6 +1,7 @@
 import os
 import json
 import yaml
+import pandas as pd
 from typing import Dict, List, Union
 
 
@@ -19,29 +20,28 @@ def load_json(json_path: str) -> Union[Dict, List[Dict]]:
 
 
 def prepare_filepaths_from_metadata(metadata: Dict,
-                                    emb_root_dir: str,
-                                    split: str | None = None,
-                                    dataset_name: str | None = None) -> List[Dict]:
+                                    split: str | None = None) -> List[Dict]:
     """Prepares a list of embedding filepaths from metadata.
 
     Args:
         metadata: A dictionary with keywords `audio_filename` and `split`.
-        emb_root_dir: The root directory of embeddings.
         split: Split to use. If None, takes all splits.
-        dataset_name: The name of a dataset.
     
     Returns:
         A list of dictionaries with embedding filepaths and metadata.
     """
-    emb_dict_lst = []
+    emb_dict_lst = [] 
+    
+    metadata = pd.DataFrame.from_dict(metadata)
+    for i, row in metadata.iterrows():
+        audio_path = row['audio_filename']
+        emb_root_dir = row['embeddings_dir']
+        audio_split = row['split']
+        source = row['source']
 
-    audio_path_lst = list(metadata['audio_filename'].values())
-    audio_split_lst = list(metadata['split'].values())
-
-    for audio_path, audio_split in zip(audio_path_lst, audio_split_lst):
         if audio_split != split and split is not None:
             continue
-        
+
         audio_filename = os.path.basename(audio_path)
         sample_name, _ = os.path.splitext(audio_filename)
         audio_rel_dir = os.path.dirname(audio_path)
@@ -51,7 +51,7 @@ def prepare_filepaths_from_metadata(metadata: Dict,
         emb_path = os.path.join(emb_dir, emb_filename)
 
         emb_dict = {"filepath": emb_path,
-                    "dataset_name": dataset_name}
+                    "source": source}
 
         emb_dict_lst.append(emb_dict)
     
