@@ -24,6 +24,8 @@ figures/
 audio_examples/
 expressive_data_stats/
 deadpan_data_stats/
+mixed_data_stats/
+*_data_stats/
 
 # User-specific files
 *.rsuser

@@ -38,30 +38,26 @@ def calculate_dataset_stats(dataset: EmbeddingDataset,
 
 
 def main(args):
-    emb_root_dir = args.data_dir
     metadata_path = args.metadata_path
     seq_len = args.seq_len
     batch_size = args.batch_size
     output_dir = args.output_dir
 
     metadata = load_json(metadata_path)
-    train_path_lst = prepare_filepaths_from_metadata(metadata,
-                                                     emb_root_dir=emb_root_dir,
+    train_dict_lst = prepare_filepaths_from_metadata(metadata,
                                                      split='train')
-    val_path_lst = prepare_filepaths_from_metadata(metadata,
-                                                   emb_root_dir=emb_root_dir,
+    val_dict_lst = prepare_filepaths_from_metadata(metadata,
                                                    split='validation')
-    test_path_lst = prepare_filepaths_from_metadata(metadata,
-                                                    emb_root_dir=emb_root_dir,
+    test_dict_lst = prepare_filepaths_from_metadata(metadata,
                                                     split='test')
 
-    train_dataset = EmbeddingDataset(emb_path_lst=train_path_lst,
+    train_dataset = EmbeddingDataset(emb_dict_lst=train_dict_lst,
                                      is_cache=False,
                                      seq_len=seq_len)
-    val_dataset = EmbeddingDataset(emb_path_lst=val_path_lst,
+    val_dataset = EmbeddingDataset(emb_dict_lst=val_dict_lst,
                                    is_cache=False,
                                    seq_len=seq_len)
-    test_dataset = EmbeddingDataset(emb_path_lst=test_path_lst,
+    test_dataset = EmbeddingDataset(emb_dict_lst=test_dict_lst,
                                     is_cache=False,
                                     seq_len=seq_len)
     
@@ -90,7 +86,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, required=True, help='directory with embeddings')
     parser.add_argument('--metadata_path', type=str, required=True, help='path to audio dataset metadata')
     parser.add_argument('--seq_len', type=int, required=True, help='sequence length')
     parser.add_argument('--batch_size', type=int, required=True, help='batch_size')
