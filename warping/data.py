@@ -7,26 +7,26 @@ from copy import deepcopy
 
 class EmbeddingDataset(Dataset):
     def __init__(self,
-                 emb_path_lst: List[str],
+                 emb_dict_lst: List[Dict],
                  is_cache: bool = True,
                  seq_len: int = 0):
         """Initializes an instance of EmbeddingDataset.
 
         Args:
-            emb_path_lst: A list of file paths.
+            emb_dict_lst: A list of dictionaries with filepaths and meta information.
             is_cache: If True, caches the dataset.
             seq_len: The sequence length to sample. If 0, preserves the whole
               sequence.
         """
         super().__init__()
-        self.emb_path_lst = emb_path_lst
+        self.emb_dict_lst = emb_dict_lst
         self.is_cache = is_cache
         self.seq_len = seq_len
 
         self.cached_samples = {}
     
     def __len__(self):
-        return len(self.emb_path_lst)
+        return len(self.emb_dict_lst)
 
     def __getitem__(self, idx):
         if self.is_cache and idx in self.cached_samples:

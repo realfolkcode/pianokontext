@@ -71,6 +71,62 @@ class TimeEmbedder(nn.Module):
         return t_emb
 
 
+class LabelEmbedder(nn.Module):
+    """
+    Embeds class labels into vector representations. Also handles
+    label dropout for CFG.
+
+    References:
+    SiT: https://github.com/willisma/SiT
+    """
+
+    def __init__(self,
+                 num_classes: int,
+                 hidden_size: int,
+                 dropout_prob: float):
+        """Initializes an instance of LabelEmbedder.
+        
+        Args:
+            num_classes: The number of classes.
+            hidden_size: The hidden size of class embeddings.
+            dropout_prob: The probability of CFG dropout.
+        """
+        super().__init__()
+        use_cfg_embedding = dropout_prob > 0
+        self.embedding_table = nn.Embedding(num_classes + use_cfg_embedding, hidden_size)
+        self.num_classes = num_classes
+        self.dropout_prob = dropout_prob
+    
+    def token_drop(self,
+                   labels: torch.Tensor):
+        """Drops labels to enable CFG.
+        
+        Args:
+            labels: Class labels.
+
+        Returns:
+            Labels with a dropped subset according to dropout.
+        """
+        drop_ids = torch.rand(labels.shape[0], device=labels.device) < self.dropout_prob
+        labels = torch.where(drop_ids, self.num_classes, labels)
+        return labels
+    
+    def forward(self,
+                labels: torch.Tensor,
+                train: bool):
+        """Forward pass of a label embedder.
+        
+        Args:
+            labels: Class labels.
+            train: If True, indicates that the model is being trained.
+        """
+        use_dropout = self.dropout_prob > 0
+        if (train and use_dropout):
+            labels = self.token_drop(labels)
+        embeddings = self.embedding_table(labels)
+        return embeddings
+
+
 def modulate(x: torch.Tensor,
              shift: torch.Tensor,
              scale: torch.Tensor) -> torch.Tensor:
@@ -256,6 +312,111 @@ class SiT(nn.Module):
         for i, block in enumerate(self.blocks):
             x = block(x, t, self.freqs_cis)     # (B, seq_len, hid_dim)
         x = self.final_layer(x, t)              # (B, seq_len, D)
+
+        return x
+
+
+class SiTConditional(nn.Module):
+    """
+    Stochastic interpolant transformer for learning vector fields
+    with class conditioning.
+    """
+    
+    def __init__(self,
+                 input_dim: int,
+                 hidden_size: int,
+                 num_blocks: int,
+                 num_heads: int,
+                 num_classes: int,
+                 mlp_ratio: float = 4.0,
+                 class_dropout_prob: float = 0.1):
+        """Initializes an instance of DiT.
+        
+        Args:
+            input_dim: The input dimension.
+            hidden_size: The dimension of hidden layers.
+            num_layers: The number of SiT blocks.
+            num_heads: The number of attention heads.
+            num_classes: The number of classes.
+            mlp_ratio: The ratio of hidden size in MLP.
+            class_dropout_prob: CFG dropout probability.
+        """
+        super().__init__()
+
+        self.projection = nn.Linear(input_dim, hidden_size, bias=True)
+
+        self.freqs_cis = precompute_freqs_cis(dim=hidden_size // num_heads,
+                                              end=128)
+        
+        self.t_embedder = TimeEmbedder(out_dim=hidden_size)
+        self.y_embedder = LabelEmbedder(num_classes=num_classes,
+                                        hidden_size=hidden_size,
+                                        dropout_prob=class_dropout_prob)
+
+        self.blocks = nn.ModuleList([
+            SiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio) for _ in range(num_blocks)
+        ])
+        self.final_layer = FinalLayer(hidden_size=hidden_size,
+                                      input_dim=input_dim)
+        
+        self.initialize_weights()
+    
+    def initialize_weights(self):
+        # Initialize transformer layers
+        def _basic_init(module):
+            if isinstance(module, nn.Linear):
+                torch.nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0)
+        self.apply(_basic_init)
+
+        # Initialize projection layer
+        nn.init.xavier_uniform_(self.projection.weight)
+        nn.init.constant_(self.projection.bias, 0)
+
+        # Initialize label embedding table
+        nn.init.normal_(self.y_embedder.embedding_table.weight, std=0.02)
+
+        # Initialize timestep embedding MLP
+        nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
+        nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
+
+        # Zero-out adaLN modulation layers in SiT blocks
+        for block in self.blocks:
+            nn.init.constant_(block.adaLN_modulation[-1].weight, 0)
+            nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
+
+        # Zero-out output layers
+        nn.init.constant_(self.final_layer.adaLN_modulation[-1].weight, 0)
+        nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0)
+        nn.init.constant_(self.final_layer.linear.weight, 0)
+        nn.init.constant_(self.final_layer.linear.bias, 0)
+    
+    def forward(self,
+                x: torch.Tensor,
+                t: torch.Tensor,
+                y: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the model.
+        
+        Args:
+            x: Batch of samples of shape (B, seq_len, D).
+            t: Batch of times of shape (B,).
+            y: Batch of class labels of shape (B,).
+        
+        Returns:
+            Batch of vector fields of shape (B, seq_len, D).
+        """
+        self.freqs_cis = self.freqs_cis.to(x.device)
+
+        x = self.projection(x)                  # (B, seq_len, hid_dim)
+        
+        t = self.t_embedder(t)                  # (B, hid_dim)
+        y = self.y_embedder(y)                  # (B, hid_dim)
+        c = t + y
+        
+        for i, block in enumerate(self.blocks):
+            x = block(x, c, self.freqs_cis)     # (B, seq_len, hid_dim)
+        x = self.final_layer(x, c)              # (B, seq_len, D)
 
         return x
 
