@@ -438,7 +438,7 @@ def prepare_sit_from_config(config: Dict,
     num_heads = config['model']['num_heads']
     mlp_ratio = config['model']['mlp_ratio']
 
-    if config['model']['num_classes'] is not None:
+    if 'num_classes' in config['model']:
         num_classes = config['model']['num_classes']
         sit = SiTConditional(input_dim=input_dim,
                              hidden_size=hidden_size,
