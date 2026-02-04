@@ -9,7 +9,8 @@ class EmbeddingDataset(Dataset):
     def __init__(self,
                  emb_dict_lst: List[Dict],
                  is_cache: bool = True,
-                 seq_len: int = 0):
+                 seq_len: int = 0,
+                 label_mapping: Dict[str, int] | None = None):
         """Initializes an instance of EmbeddingDataset.
 
         Args:
@@ -17,13 +18,16 @@ class EmbeddingDataset(Dataset):
             is_cache: If True, caches the dataset.
             seq_len: The sequence length to sample. If 0, preserves the whole
               sequence.
+            label_mapping: Optional mapping from label names to label indices.
         """
         super().__init__()
         self.emb_dict_lst = emb_dict_lst
         self.is_cache = is_cache
         self.seq_len = seq_len
+        self.label_mapping = label_mapping
 
         self.cached_samples = {}
+        self.cached_labels = {}
     
     def __len__(self):
         return len(self.emb_dict_lst)
@@ -31,16 +35,25 @@ class EmbeddingDataset(Dataset):
     def __getitem__(self, idx):
         if self.is_cache and idx in self.cached_samples:
             sample = self.cached_samples[idx]
+            label = self.cached_labels[idx]
         else:    
             filepath = self.emb_dict_lst[idx]["filepath"]
             sample = self._load_sample(filepath)
+            if self.label_mapping is not None:
+                label = self.emb_dict_lst[idx]["source"]
+                label = self.label_mapping[label]
+            else:
+                label = None
         
         if self.is_cache and idx not in self.cached_samples:
             self.cached_samples[idx] = sample
+            self.cached_labels[idx] = label
         
         if self.seq_len > 0:
             sample = self._sample_subseq(sample)
         
+        if label is not None:
+            return sample, label
         return sample
 
     def _load_sample(self,

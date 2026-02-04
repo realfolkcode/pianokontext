@@ -411,7 +411,7 @@ class SiTConditional(nn.Module):
         x = self.projection(x)                  # (B, seq_len, hid_dim)
         
         t = self.t_embedder(t)                  # (B, hid_dim)
-        y = self.y_embedder(y)                  # (B, hid_dim)
+        y = self.y_embedder(y, self.training)   # (B, hid_dim)
         c = t + y
         
         for i, block in enumerate(self.blocks):
@@ -422,7 +422,7 @@ class SiTConditional(nn.Module):
 
 
 def prepare_sit_from_config(config: Dict,
-                            device: str) -> SiT:
+                            device: str) -> nn.Module:
     """Prepares an instance of SiT from a config.
 
     Args:
@@ -438,10 +438,19 @@ def prepare_sit_from_config(config: Dict,
     num_heads = config['model']['num_heads']
     mlp_ratio = config['model']['mlp_ratio']
 
-    sit = SiT(input_dim=input_dim,
-              hidden_size=hidden_size,
-              num_blocks=num_blocks,
-              num_heads=num_heads,
-              mlp_ratio=mlp_ratio).to(device)
+    if config['model']['num_classes'] is not None:
+        num_classes = config['model']['num_classes']
+        sit = SiTConditional(input_dim=input_dim,
+                             hidden_size=hidden_size,
+                             num_blocks=num_blocks,
+                             num_heads=num_heads,
+                             num_classes=num_classes,
+                             mlp_ratio=mlp_ratio).to(device)
+    else:
+        sit = SiT(input_dim=input_dim,
+                  hidden_size=hidden_size,
+                  num_blocks=num_blocks,
+                  num_heads=num_heads,
+                  mlp_ratio=mlp_ratio).to(device)
     
     return sit
