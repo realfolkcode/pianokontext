@@ -4,12 +4,42 @@ import torch.nn as nn
 from .interpolant import DeterministicInterpolant
 
 
+def cfg_step(model: nn.Module,
+             x: torch.Tensor,
+             t: torch.Tensor,
+             y: torch.Tensor,
+             cfg_strength: float) -> torch.Tensor:
+    """CFG velocity prediction.
+
+    Args:
+        model: Flow matching model.
+        x: A noisy latent of shape (B, seq_len, dim).
+        t: Batch of times of shape (B,).
+        y: Labels of shape (B,).        
+        cfg_strength: Classifier-free guidance strength.
+    
+    Returns:
+        CFG velocity of shape (B, seq_len, dim).
+    """
+    num_classes = model.y_embedder.num_classes
+    y_null = torch.tensor([num_classes] * len(y), device=y.device)
+
+    v = model(x, t, y)
+    v_null = model(x, t, y_null)
+
+    v = (1 - cfg_strength) * v_null + cfg_strength * v
+    return v
+
+
 @torch.no_grad()
 def denoise_latent(model: nn.Module,
                    interpolant: DeterministicInterpolant,
                    seq_len: int,
                    device: str,
-                   batch_size: int = 1,
+                   x: torch.Tensor | None = None,
+                   y: torch.Tensor | None = None,
+                   cfg_strength: float | None = None,
+                   batch_size: int | None = 1,
                    dim: int = 64,
                    num_steps: int = 100) -> torch.Tensor:
     """Samples noise and denoises it into a latent code.
@@ -21,6 +51,9 @@ def denoise_latent(model: nn.Module,
         interpolant: Flow interpolant.
         seq_len: Sequence length.
         device: Device.
+        x: A noisy latent of shape (B, seq_len, dim).
+        y: Labels of shape (B,). If passed, applies CFG.
+        cfg_strength: Classifier-free guidance strength.
         batch_size: Batch size.
         dim: Latent dimension.
         num_steps: The number of ODE steps.
@@ -30,14 +63,26 @@ def denoise_latent(model: nn.Module,
     """
     model.eval()
 
-    x = torch.randn((batch_size, seq_len, dim)).to(device)
+    if x is None:
+        x = torch.randn((batch_size, seq_len, dim)).to(device)
+    
     t_space = torch.linspace(0, 1, num_steps + 1)[:-1].to(device)
     dt = t_space[1] - t_space[0]
+
     for t in t_space:
         t = t.unsqueeze(0)
-        v = model(x, t)
-        v_next = model(x + v * dt, t + dt)
-        x = x + (v + v_next) * dt / 2
+        if y is None:
+            v = model(x, t)
+            v_next = model(x + v * dt, t + dt)
+            x = x + (v + v_next) * dt / 2
+        else:
+            v = cfg_step(model, x, t, y, cfg_strength)
+            v_next = cfg_step(model,
+                              x + v * dt,
+                              t + dt,
+                              y,
+                              cfg_strength)
+            x = x + v * dt
     
     x = interpolant._unnormalize(x) 
     return x
