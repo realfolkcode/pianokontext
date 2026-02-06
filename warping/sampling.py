@@ -67,9 +67,41 @@ def denoise_latent(model: nn.Module,
         x = torch.randn((batch_size, seq_len, dim)).to(device)
     
     t_space = torch.linspace(0, 1, num_steps + 1)[:-1].to(device)
-    dt = t_space[1] - t_space[0]
 
-    for t in t_space:
+    x = solve_ode(model=model,
+                  x_init=x,
+                  time_grid=t_space,
+                  y=y,
+                  cfg_strength=cfg_strength)
+    x = interpolant._unnormalize(x) 
+    return x
+
+
+@torch.no_grad()
+def solve_ode(model: nn.Module,
+              x_init: torch.Tensor,
+              time_grid: torch.Tensor,
+              y: torch.Tensor | None = None,
+              cfg_strength: float | None = None) -> torch.Tensor:
+    """Solves an Initial Value Problem with a Flow Matching model.
+
+    Uses a Heun (midpoint) method to solve ODE.
+    
+    Args:
+        model: Flow matching model.
+        x_init: Initial condition of shape (B, seq_len, D).
+        time_grid: Time grid of shape (num_steps).
+        y: Labels of shape (B,). If passed, applies CFG.
+        cfg_strength: Classifier-free guidance strength.
+    
+    Returns:
+        Latent code of shape (B, seq_len, dim).
+    """
+    model.eval()
+    x = x_init.clone()
+    dt = time_grid[1] - time_grid[0]
+    
+    for t in time_grid:
         t = t.unsqueeze(0)
         if y is None:
             v = model(x, t)
@@ -83,36 +115,6 @@ def denoise_latent(model: nn.Module,
                               y,
                               cfg_strength)
             x = x + v * dt
-    
-    x = interpolant._unnormalize(x) 
-    return x
-
-
-@torch.no_grad()
-def solve_ode(model: nn.Module,
-              x_init: torch.Tensor,
-              time_grid: torch.Tensor) -> torch.Tensor:
-    """Solves an Initial Value Problem with a Flow Matching model.
-
-    Uses a Heun (midpoint) method to solve ODE.
-    
-    Args:
-        model: Flow matching model.
-        x_init: Initial condition of shape (B, seq_len, D).
-        time_grid: Time grid of shape (num_steps).
-    
-    Returns:
-        Latent code of shape (B, seq_len, dim).
-    """
-    model.eval()
-    x = x_init.clone()
-    dt = time_grid[1] - time_grid[0]
-    
-    for t in time_grid:
-        t = t.unsqueeze(0)
-        v = model(x, t)
-        v_next = model(x + v * dt, t + dt)
-        x = x + (v + v_next) * dt / 2
     
     return x
 
