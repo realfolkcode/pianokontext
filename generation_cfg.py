@@ -56,11 +56,11 @@ def main(args):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    y = torch.tensor([label] * batch_size, device=device)
-
     i = 0
     while i < num_samples:
         batch_size = min(batch_size, num_samples - i)
+
+        y = torch.tensor([label] * batch_size, device=device)
 
         x = denoise_latent(model=sit,
                            interpolant=interpolant,

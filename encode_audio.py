@@ -6,15 +6,22 @@ from tqdm import tqdm
 
 from warping.utils import load_json
 from warping.backbone import EncoderDecoder
+from codicodec import EncoderDecoder as CodicodecEncoderDecoder
 
 
 def main(args):
     audio_root_dir = args.audio_dir
     metadata_path = args.audio_metadata
     emb_root_dir = args.emb_dir
+    backbone = args.backbone
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    encdec = EncoderDecoder(device=device)
+
+    assert backbone in ["music2latent", "codicodec"]
+    if backbone in "music2latent":
+        encdec = EncoderDecoder(device=device)
+    else:
+        encdec = CodicodecEncoderDecoder(device=device)
 
     os.makedirs(emb_root_dir, exist_ok=True)
 
@@ -43,6 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--audio_dir', type=str, required=True, help='path to audio dataset directory')
     parser.add_argument('--audio_metadata', type=str, required=True, help='path to audio dataset metadata')
     parser.add_argument('--emb_dir', type=str, required=True, help='output path to embedding dataset directory')
+    parser.add_argument('--backbone', type=str, required=True, help='music2latent or codicodec model')
 
     args = parser.parse_args()
 
