@@ -236,6 +236,7 @@ class SiT(nn.Module):
                  hidden_size: int,
                  num_blocks: int,
                  num_heads: int,
+                 seq_len: int = 128,
                  mlp_ratio: float = 4.0):
         """Initializes an instance of DiT.
         
@@ -244,6 +245,7 @@ class SiT(nn.Module):
             hidden_size: The dimension of hidden layers.
             num_layers: The number of SiT blocks.
             num_heads: The number of attention heads.
+            seq_len: The sequence length.
             mlp_ratio: The ratio of hidden size in MLP.
         """
         super().__init__()
@@ -251,7 +253,7 @@ class SiT(nn.Module):
         self.projection = nn.Linear(input_dim, hidden_size, bias=True)
 
         self.freqs_cis = precompute_freqs_cis(dim=hidden_size // num_heads,
-                                              end=128)
+                                              end=seq_len)
         
         self.t_embedder = TimeEmbedder(out_dim=hidden_size)
 
@@ -328,6 +330,7 @@ class SiTConditional(nn.Module):
                  num_blocks: int,
                  num_heads: int,
                  num_classes: int,
+                 seq_len: int = 128,
                  mlp_ratio: float = 4.0,
                  class_dropout_prob: float = 0.1):
         """Initializes an instance of DiT.
@@ -338,6 +341,7 @@ class SiTConditional(nn.Module):
             num_layers: The number of SiT blocks.
             num_heads: The number of attention heads.
             num_classes: The number of classes.
+            seq_len: The sequence length.
             mlp_ratio: The ratio of hidden size in MLP.
             class_dropout_prob: CFG dropout probability.
         """
@@ -346,7 +350,7 @@ class SiTConditional(nn.Module):
         self.projection = nn.Linear(input_dim, hidden_size, bias=True)
 
         self.freqs_cis = precompute_freqs_cis(dim=hidden_size // num_heads,
-                                              end=128)
+                                              end=seq_len)
         
         self.t_embedder = TimeEmbedder(out_dim=hidden_size)
         self.y_embedder = LabelEmbedder(num_classes=num_classes,
@@ -436,7 +440,11 @@ def prepare_sit_from_config(config: Dict,
     hidden_size = config['model']['hidden_size']
     num_blocks = config['model']['num_blocks']
     num_heads = config['model']['num_heads']
+    seq_len = config['model']['seq_len']
     mlp_ratio = config['model']['mlp_ratio']
+
+    if config['data']['backbone'] == 'codicodec':
+        seq_len = seq_len * 8
 
     if 'num_classes' in config['model']:
         num_classes = config['model']['num_classes']
@@ -445,12 +453,14 @@ def prepare_sit_from_config(config: Dict,
                              num_blocks=num_blocks,
                              num_heads=num_heads,
                              num_classes=num_classes,
+                             seq_len=seq_len,
                              mlp_ratio=mlp_ratio).to(device)
     else:
         sit = SiT(input_dim=input_dim,
                   hidden_size=hidden_size,
                   num_blocks=num_blocks,
                   num_heads=num_heads,
+                  seq_len=seq_len,
                   mlp_ratio=mlp_ratio).to(device)
     
     return sit

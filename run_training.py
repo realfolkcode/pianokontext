@@ -32,6 +32,7 @@ def main(args):
         metrics_logger = None
 
     batch_size = config['data']['batch_size']
+    backbone = config['data']['backbone']
     seq_len = config['model']['seq_len']
     checkpoint_name = config['model']['checkpoint_name']
     learning_rate = config['train']['lr']
@@ -51,10 +52,12 @@ def main(args):
 
     train_dataset = EmbeddingDataset(emb_dict_lst=train_dict_lst,
                                      is_cache=True,
-                                     seq_len=seq_len)
+                                     seq_len=seq_len,
+                                     backbone=backbone)
     val_dataset = EmbeddingDataset(emb_dict_lst=val_dict_lst,
                                    is_cache=True,
-                                   seq_len=seq_len)
+                                   seq_len=seq_len,
+                                   backbone=backbone)
     
     #Cache datasets
     for x in train_dataset:
@@ -70,7 +73,11 @@ def main(args):
                             batch_size=batch_size,
                             shuffle=False)
     
-    data_stats = load_json(stats_path)
+    if stats_path is None or stats_path == "None":
+        data_stats = None
+    else:
+        data_stats = load_json(stats_path)
+    
     interpolant = DeterministicInterpolant(train_stats=data_stats,
                                            device=device)
 
@@ -111,7 +118,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--metadata_path', type=str, required=True, help='path to audio dataset metadata')
-    parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')
+    parser.add_argument('--stats_path', type=str, default=None, help='path to dataset embedding statistics')
     parser.add_argument('--project_name', type=str, required=False, default=None, help='wandb project name')
     parser.add_argument('--config_path', type=str, required=True, default=None, help='path to yaml config')
     parser.add_argument('--checkpoint_dir', type=str, required=True, default=None, help='directory to store checkpoints')

@@ -14,6 +14,8 @@ from warping.sit import prepare_sit_from_config
 from warping.backbone import EncoderDecoder
 from warping.sampling import denoise_latent
 
+from codicodec import EncoderDecoder as CodicodecEncoderDecoder
+
 
 def main(args):
     output_dir = args.output_dir
@@ -29,6 +31,10 @@ def main(args):
     seq_len = config['model']['seq_len']
     checkpoint_name = config['model']['checkpoint_name']
     is_ema = config['train']['is_ema']
+    backbone = config['data']['backbone']
+    output_dim = config['data']['input_dim']
+
+    assert backbone in ["music2latent", "codicodec"]
 
     checkpoint_path = os.path.join(checkpoint_dir, f"{checkpoint_name}.pt")
     if is_ema:
@@ -38,7 +44,11 @@ def main(args):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    data_stats = load_json(stats_path)
+    if stats_path is None or stats_path == "None":
+        data_stats = None
+    else:
+        data_stats = load_json(stats_path)
+    
     interpolant = DeterministicInterpolant(train_stats=data_stats,
                                            device=device)
 
@@ -47,7 +57,13 @@ def main(args):
     sit.load_state_dict(torch.load(checkpoint_path)[is_ema], strict=False)
     sit.eval()
 
-    encdec = EncoderDecoder(device=device)
+    if backbone == "music2latent":
+        encdec = EncoderDecoder(device=device)
+        noise_seq_len = seq_len
+    else:
+        encdec = CodicodecEncoderDecoder(device=device)
+        batch_size = 1
+        noise_seq_len = 8 * seq_len
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -57,16 +73,26 @@ def main(args):
 
         x = denoise_latent(model=sit,
                            interpolant=interpolant,
-                           seq_len=seq_len,
+                           seq_len=noise_seq_len,
                            device=device,
                            batch_size=batch_size,
+                           dim=output_dim,
                            num_steps=num_steps)
         
-        x = torch.transpose(x, 1, 2)
-        audio_batch = encdec.decode(x)
+        if backbone == "music2latent":
+            x = torch.transpose(x, 1, 2)
+            audio_batch = encdec.decode(x)
+        else:
+            x = x.reshape(seq_len, 8, 64)
+            audio_batch = encdec.decode(x, mode="autoregressive")
+            audio_batch = audio_batch.unsqueeze(0)
+
         audio_batch = audio_batch.cpu().numpy()
 
         for j, sample in tqdm(enumerate(audio_batch)):
+            sample = sample.squeeze()
+            if len(sample.shape) == 2:
+                sample = sample.T
             filename = f"generated_{i + j}.mp3"
             filepath = os.path.join(output_dir, filename)
             sf.write(filepath,
@@ -82,7 +108,7 @@ if __name__ ==  "__main__":
     parser.add_argument('--num_samples', type=int, required=True, default=10, help='number of samples to generate')
     parser.add_argument('--num_steps', type=int, required=True, default=64, help='number of inference steps')
     parser.add_argument('--config_path', type=str, required=True, default=None, help='path to yaml config')
-    parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')    
+    parser.add_argument('--stats_path', type=str, default=None, help='path to dataset embedding statistics')    
     parser.add_argument('--checkpoint_dir', type=str, required=True, default=None, help='directory to store checkpoints')
     
     args = parser.parse_args()
