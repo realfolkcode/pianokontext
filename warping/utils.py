@@ -58,6 +58,22 @@ def prepare_filepaths_from_metadata(metadata: Dict,
     return emb_dict_lst
 
 
+def prepare_filepaths_from_paired_metadata(
+    metadata: Dict,
+    split: str | None = None
+) -> List[Dict]:
+    """Prepares a list of embedding filepaths from paired metadata.
+
+    Args:
+        metadata: A dictionary with metadata.
+        split: Split to use. If None, takes all splits.
+    
+    Returns:
+        A list of dictionaries with embedding filepaths and metadata.
+    """
+    pass
+
+
 def load_config(config_path: str) -> Dict:
     """Loads a yaml config for setting experiment parameters.
     
