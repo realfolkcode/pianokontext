@@ -2,7 +2,7 @@ import os
 import json
 import yaml
 import pandas as pd
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 
 def load_json(json_path: str) -> Union[Dict, List[Dict]]:
@@ -56,6 +56,29 @@ def prepare_filepaths_from_metadata(metadata: Dict,
         emb_dict_lst.append(emb_dict)
     
     return emb_dict_lst
+
+
+def construct_filepath(new_root_dir: str,
+                       audio_filename: str,
+                       ext: str) -> Tuple[str, str]:
+    """
+    Replaces the audio filename with the new filename given the root directory
+    and a new extension.
+
+    Args:
+        new_root_dir: New root directory.
+        audio_filename: Relative audio path.
+        ext: New extension.
+    
+    Returns:
+        New directory and a filepath.
+    """
+    new_dir = os.path.join(new_root_dir,
+                           os.path.dirname(audio_filename))
+    filename = os.path.basename(audio_filename)
+    filename, _ = os.path.splitext(filename)
+    filename = f"{filename}.{ext}"
+    return new_dir, filename
 
 
 def prepare_filepaths_from_paired_metadata(
