@@ -81,20 +81,61 @@ def construct_filepath(new_root_dir: str,
     return new_dir, filename
 
 
-def prepare_filepaths_from_paired_metadata(
+def prepare_filepaths_from_aligned_metadata(
     metadata: Dict,
     split: str | None = None
 ) -> List[Dict]:
-    """Prepares a list of embedding filepaths from paired metadata.
+    """Prepares a list of embedding filepaths from aligned metadata.
 
     Args:
         metadata: A dictionary with metadata.
         split: Split to use. If None, takes all splits.
     
     Returns:
-        A list of dictionaries with embedding filepaths and metadata.
+        A list of dictionaries with embedding filepaths and alignment.
     """
-    pass
+    emb_dict_lst = [] 
+    
+    metadata = pd.DataFrame.from_dict(metadata)
+    for i, row in metadata.iterrows():
+        audio_split = row["split"]
+        if audio_split != split and split is not None:
+            continue
+
+        # Process expressive metadata
+        expressive_emb_dir = row["expressive_emb_dir"]
+        expressive_filepath = row["expressive_filename"]
+        emb_dir, emb_filename = construct_filepath(new_root_dir=expressive_emb_dir,
+                                                   audio_filename=expressive_filepath,
+                                                   ext="pt")
+        expressive_path = os.path.join(emb_dir, emb_filename)
+        expressive_start = row["start"]
+        expressive_end = row["end"]
+
+        # Process deadpan metadata
+        deadpan_emb_dir = row["deadpan_emb_dir"]
+        deadpan_filepath = row["deadpan_filename"]
+        emb_dir, emb_filename = construct_filepath(new_root_dir=deadpan_emb_dir,
+                                                   audio_filename=deadpan_filepath,
+                                                   ext="pt")
+        deadpan_path = os.path.join(emb_dir, emb_filename)
+
+        # Process alignment metadata
+        alignment_dir = row["alignment_dir"]
+        alignment_dir, alignment_filename = construct_filepath(new_root_dir=alignment_dir,
+                                                               audio_filename=expressive_filepath,
+                                                               ext='pt')
+        alignment_filepath = os.path.join(alignment_dir, alignment_filename)
+
+        # Gather dictionary
+        emb_dict = {"expressive_path": expressive_path,
+                    "deadpan_path": deadpan_path,
+                    "alignment_filepath": alignment_filepath,
+                    "expressive_start_s": expressive_start,
+                    "expressive_end_s": expressive_end}
+        emb_dict_lst.append(emb_dict)
+    
+    return emb_dict_lst
 
 
 def load_config(config_path: str) -> Dict:
