@@ -4,6 +4,8 @@ from torch.utils.data import Dataset
 from typing import List, Dict
 from copy import deepcopy
 
+from .alignment import cut_embedding
+
 
 class EmbeddingDataset(Dataset):
     def __init__(self,
@@ -81,3 +83,142 @@ class EmbeddingDataset(Dataset):
 
         new_sample = deepcopy(sample)
         return new_sample[start_pos:end_pos]
+
+
+class AlignedDataset(Dataset):
+    def __init__(self,
+                 emb_dict_lst: List[Dict],
+                 is_cache: bool = True,
+                 seq_len: int = 0):
+        """Initializes an instance of AlignedDataset.
+
+        Args:
+            emb_dict_lst: A list of dictionaries with aligned filepaths.
+            is_cache: If True, caches the dataset.
+            seq_len: The max sequence length to sample. If 0, preserves the whole
+              sequence.
+        """
+        super().__init__()
+        self.emb_dict_lst = emb_dict_lst
+        self.is_cache = is_cache
+        self.seq_len = seq_len
+
+        self.cached_samples = {}
+    
+    def __len__(self):
+        return len(self.emb_dict_lst)
+    
+    def _load_expressive_sample(self,
+                                emb_dict: Dict) -> torch.Tensor:
+        expressive_path = emb_dict["expressive_path"]
+        expressive_start_s = emb_dict["expressive_start_s"]
+        expressive_end_s = emb_dict["expressive_end_s"]
+
+        expressive_emb = torch.load(expressive_path)
+        expressive_emb = expressive_emb.squeeze().T
+        expressive_emb = cut_embedding(expressive_emb,
+                                       start_s=expressive_start_s,
+                                       end_s=expressive_end_s)
+        return expressive_emb
+    
+    def _load_deadpan_sample(self,
+                             emb_dict: Dict) -> torch.Tensor:
+        deadpan_path = emb_dict["deadpan_path"]
+        deadpan_emb = torch.load(deadpan_path)
+        deadpan_emb = deadpan_emb.squeeze().T
+        return deadpan_emb
+    
+    def __getitem__(self, idx):
+        emb_dict = self.emb_dict_lst[idx]
+
+        deadpan_emb = self._load_deadpan_sample(emb_dict)
+        expressive_emb = self._load_expressive_sample(emb_dict)
+        
+        alignment_filepath = emb_dict["alignment_filepath"]
+        dtw_path = torch.load(alignment_filepath)
+
+        sample = {"deadpan": deadpan_emb,
+                  "expressive": expressive_emb,
+                  "dtw_path": dtw_path}
+
+        if self.seq_len > 0:
+            sample["dtw_max_idx"] = self._calculate_max_indices(dtw_path)
+
+        if self.is_cache and idx not in self.cached_samples:
+            self.cached_samples[idx] = sample
+
+        if self.seq_len > 0:
+            sample = self._sample_subseq(sample)
+
+        return sample
+
+    def _sample_subseq(self,
+                       sample: Dict) -> Dict:
+        """Samples a subsequence from a sample.
+        
+        Args:
+            sample: A dictionary with deadpan and expressive embeddings,
+              DTW path and max indices.
+        
+        Returns:
+            A dictionary with deadpan and expressive subsequences.
+        """
+        deadpan_emb = sample["deadpan"]
+        expressive_emb = sample["expressive"]
+        dtw_path = sample["dtw_path"]
+        dtw_max_idx = sample["dtw_max_idx"]
+
+        deadpan_idx = dtw_path["deadpan"]
+        expressive_idx = dtw_path["expressive"]
+
+        dtw_start = torch.randint(low=0, high=len(dtw_max_idx), size=(1,))
+        dtw_end = torch.randint(low=dtw_start, high=dtw_max_idx[dtw_start] + 1, size=(1,))
+
+        deadpan_start = deadpan_idx[dtw_start]
+        deadpan_end = deadpan_idx[dtw_end]
+        deadpan_emb = deadpan_emb[deadpan_start:deadpan_end + 1]
+        assert deadpan_end - deadpan_start + 1 <= self.seq_len
+
+        expressive_start = expressive_idx[dtw_start]
+        expressive_end = expressive_idx[dtw_end]
+        expressive_emb = expressive_emb[expressive_start:expressive_end + 1]
+        assert expressive_end - expressive_start + 1 <= self.seq_len
+
+        new_sample = {"deadpan": deadpan_emb,
+                      "expressive": expressive_emb}
+        return new_sample
+
+    def _calculate_max_indices(self,
+                               dtw_path: Dict) -> torch.Tensor:
+        """
+        Calculates the maximum indices for sampling for each starting
+        index.
+
+        Args:
+            dtw_path: The DTW path indices for deadpan and expressive
+              embeddings.
+        
+        Returns:
+            A tensor with maximum indices for sampling for each starting
+            index. 
+        """
+        deadpan_idx = dtw_path["deadpan"]
+        expressive_idx = dtw_path["expressive"]
+
+        dtw_max_idx = torch.full_like(deadpan_idx, len(deadpan_idx) - 1)
+
+        start = 0
+        end = 0
+        while end < len(deadpan_idx):
+            deadpan_len = deadpan_idx[end] - deadpan_idx[start] + 1
+            expressive_len = expressive_idx[end] - expressive_idx[start] + 1
+            if deadpan_len < self.seq_len and expressive_len < self.seq_len:
+                end += 1
+            else:
+                dtw_max_idx[start] = end
+                start += 1
+        
+        assert torch.all(deadpan_idx[dtw_max_idx] - deadpan_idx < self.seq_len)
+        assert torch.all(expressive_idx[dtw_max_idx] - expressive_idx < self.seq_len)
+        
+        return dtw_max_idx
