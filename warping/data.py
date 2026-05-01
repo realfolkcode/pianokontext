@@ -161,7 +161,8 @@ class AlignedDataset(Dataset):
               DTW path and max indices.
         
         Returns:
-            A dictionary with deadpan and expressive subsequences.
+            A dictionary with deadpan and expressive subsequences and their
+            masks.
         """
         deadpan_emb = sample["deadpan"]
         expressive_emb = sample["expressive"]
@@ -176,16 +177,26 @@ class AlignedDataset(Dataset):
 
         deadpan_start = deadpan_idx[dtw_start]
         deadpan_end = deadpan_idx[dtw_end]
-        deadpan_emb = deadpan_emb[deadpan_start:deadpan_end + 1]
+        deadpan_emb_sub = torch.zeros((self.seq_len, deadpan_emb.shape[-1]))
+        deadpan_emb_sub[:deadpan_end - deadpan_start + 1] = deadpan_emb[deadpan_start:deadpan_end + 1]
         assert deadpan_end - deadpan_start + 1 <= self.seq_len
 
         expressive_start = expressive_idx[dtw_start]
         expressive_end = expressive_idx[dtw_end]
-        expressive_emb = expressive_emb[expressive_start:expressive_end + 1]
+        expressive_emb_sub = torch.zeros((self.seq_len, expressive_emb.shape[-1]))
+        expressive_emb_sub[:expressive_end - expressive_start + 1] = expressive_emb[expressive_start:expressive_end + 1]
         assert expressive_end - expressive_start + 1 <= self.seq_len
 
-        new_sample = {"deadpan": deadpan_emb,
-                      "expressive": expressive_emb}
+        deadpan_mask = torch.zeros((self.seq_len)).bool()
+        deadpan_mask[:deadpan_end - deadpan_start + 1] = 1
+
+        expressive_mask = torch.zeros((self.seq_len)).bool()
+        expressive_mask[:expressive_end - expressive_start + 1] = 1
+
+        new_sample = {"deadpan": deadpan_emb_sub,
+                      "deadpan_mask": deadpan_mask,
+                      "expressive": expressive_emb_sub,
+                      "expressive_mask": expressive_mask}
         return new_sample
 
     def _calculate_max_indices(self,
