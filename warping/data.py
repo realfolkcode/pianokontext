@@ -173,19 +173,19 @@ class AlignedDataset(Dataset):
         expressive_idx = dtw_path["expressive"]
 
         dtw_start = torch.randint(low=0, high=len(dtw_max_idx), size=(1,))
-        dtw_end = torch.randint(low=dtw_start, high=dtw_max_idx[dtw_start] + 1, size=(1,))
+        dtw_end = torch.randint(low=dtw_start + 1, high=dtw_max_idx[dtw_start] + 1, size=(1,))
 
         deadpan_start = deadpan_idx[dtw_start]
         deadpan_end = deadpan_idx[dtw_end]
+        assert deadpan_end - deadpan_start + 1 <= self.seq_len
         deadpan_emb_sub = torch.zeros((self.seq_len, deadpan_emb.shape[-1]))
         deadpan_emb_sub[:deadpan_end - deadpan_start + 1] = deadpan_emb[deadpan_start:deadpan_end + 1]
-        assert deadpan_end - deadpan_start + 1 <= self.seq_len
 
         expressive_start = expressive_idx[dtw_start]
         expressive_end = expressive_idx[dtw_end]
+        assert expressive_end - expressive_start + 1 <= self.seq_len
         expressive_emb_sub = torch.zeros((self.seq_len, expressive_emb.shape[-1]))
         expressive_emb_sub[:expressive_end - expressive_start + 1] = expressive_emb[expressive_start:expressive_end + 1]
-        assert expressive_end - expressive_start + 1 <= self.seq_len
 
         deadpan_mask = torch.zeros((self.seq_len)).bool()
         deadpan_mask[:deadpan_end - deadpan_start + 1] = 1
@@ -228,6 +228,9 @@ class AlignedDataset(Dataset):
             else:
                 dtw_max_idx[start] = end
                 start += 1
+        
+        assert torch.all(deadpan_idx[dtw_max_idx] >= deadpan_idx)
+        assert torch.all(expressive_idx[dtw_max_idx] >= expressive_idx)
         
         assert torch.all(deadpan_idx[dtw_max_idx] - deadpan_idx < self.seq_len)
         assert torch.all(expressive_idx[dtw_max_idx] - expressive_idx < self.seq_len)

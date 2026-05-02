@@ -19,6 +19,8 @@ def main(args):
 
     paired_metadata["alignment_dir"] = output_dir
 
+    os.makedirs(output_dir, exist_ok=True)
+
     for i, row in tqdm(paired_metadata.iterrows()):
         expressive_emb_dir = row["expressive_emb_dir"]
         expressive_filepath = row["expressive_filename"]
@@ -45,11 +47,8 @@ def main(args):
 
         dtw_path = calculate_dtw_path(deadpan_emb=deadpan_emb,
                                       expressive_emb=expressive_emb)
-        alignment_dir, alignment_filename = construct_filepath(new_root_dir=output_dir,
-                                                               audio_filename=expressive_filepath,
-                                                               ext="pt")
-        os.makedirs(alignment_dir, exist_ok=True)
-        alignment_filepath = os.path.join(alignment_dir, alignment_filename)
+        alignment_filename = f"alignment_{i}.pt"
+        alignment_filepath = os.path.join(output_dir, alignment_filename)
         torch.save(dtw_path, alignment_filepath)
 
     with open(output_metadata_path, "w", encoding="utf8") as f:

@@ -122,9 +122,7 @@ def prepare_filepaths_from_aligned_metadata(
 
         # Process alignment metadata
         alignment_dir = row["alignment_dir"]
-        alignment_dir, alignment_filename = construct_filepath(new_root_dir=alignment_dir,
-                                                               audio_filename=expressive_filepath,
-                                                               ext='pt')
+        alignment_filename = f"alignment_{i}.pt"
         alignment_filepath = os.path.join(alignment_dir, alignment_filename)
 
         # Gather dictionary
