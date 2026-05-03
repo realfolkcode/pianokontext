@@ -128,9 +128,8 @@ class AlignedDataset(Dataset):
         deadpan_emb = deadpan_emb.squeeze().T
         return deadpan_emb
     
-    def __getitem__(self, idx):
-        emb_dict = self.emb_dict_lst[idx]
-
+    def _load_sample(self,
+                     emb_dict: Dict) -> Dict:
         deadpan_emb = self._load_deadpan_sample(emb_dict)
         expressive_emb = self._load_expressive_sample(emb_dict)
         
@@ -143,6 +142,16 @@ class AlignedDataset(Dataset):
 
         if self.seq_len > 0:
             sample["dtw_max_idx"] = self._calculate_max_indices(dtw_path)
+
+        return sample
+    
+    def __getitem__(self, idx):
+        emb_dict = self.emb_dict_lst[idx]
+
+        if idx not in self.cached_samples:
+            sample = self._load_sample(emb_dict)
+        else:
+            sample = self.cached_samples[idx]
 
         if self.is_cache and idx not in self.cached_samples:
             self.cached_samples[idx] = sample
