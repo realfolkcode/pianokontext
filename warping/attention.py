@@ -121,7 +121,14 @@ class MaskedAttention(nn.Module):
 
     def forward(self, 
                 x: torch.Tensor,
+                mask: torch.Tensor,
                 freqs_cis: torch.Tensor | None = None) -> torch.Tensor:
+        """Forward pass of MaskedAttention.
+
+        Args:
+            x: Input of shape (B, seq_len, dim).
+            mask: Attention mask of shape (B, seq_len, seq_len).
+        """
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 1, 3, 4) # (3, B, N, H, D)
         q, k, v = qkv.unbind(0)
@@ -136,6 +143,7 @@ class MaskedAttention(nn.Module):
 
         x = F.scaled_dot_product_attention(
             q, k, v,
+            attn_mask=mask,
             dropout_p=self.attn_drop.p if self.training else 0.,
         )
 

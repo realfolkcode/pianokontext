@@ -182,7 +182,7 @@ class AlignedDataset(Dataset):
         expressive_idx = dtw_path["expressive"]
 
         dtw_start = torch.randint(low=0, high=len(dtw_max_idx), size=(1,))
-        dtw_end = torch.randint(low=dtw_start + 1, high=dtw_max_idx[dtw_start] + 1, size=(1,))
+        dtw_end = torch.randint(low=dtw_start, high=dtw_max_idx[dtw_start] + 1, size=(1,))
 
         deadpan_start = deadpan_idx[dtw_start]
         deadpan_end = deadpan_idx[dtw_end]
