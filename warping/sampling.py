@@ -167,3 +167,47 @@ class DualBridge:
         x1_rec = self.interpolant_dec._unnormalize(x1_rec)
         
         return x1_rec
+
+
+@torch.no_grad()
+def solve_ode_flux(model: nn.Module,
+                   x_init: torch.Tensor,
+                   x_init_mask: torch.Tensor,
+                   time_grid: torch.Tensor,
+                   context: torch.Tensor,
+                   context_mask: torch.Tensor) -> torch.Tensor:
+    """Solves an Initial Value Problem with a Flux-style Flow Matching model.
+
+    Uses a Heun (midpoint) method to solve ODE.
+    
+    Args:
+        model: Flow matching model.
+        x_init: Initial condition of shape (B, seq_len, D).
+        x_init_mask: Mask for initial condition of shape (B, seq_len).
+        time_grid: Time grid of shape (num_steps).
+        context: Context of shape (B, seq_len, D).
+        context_mask: Mask for context of shape (B, seq_len).
+    
+    Returns:
+        Latent code of shape (B, seq_len, dim).
+    """
+    model.eval()
+    x = x_init.clone()
+    dt = time_grid[1] - time_grid[0]
+    
+    for t in time_grid:
+        t = t.unsqueeze(0)
+        
+        v = model(x=x,
+                  x_mask=x_init_mask,
+                  context=context,
+                  context_mask=context_mask,
+                  t=t)
+        v_next = model(x=x + v * dt,
+                       x_mask=x_init_mask,
+                       context=context,
+                       context_mask=context_mask,
+                       t=t + dt)
+        x = x + (v + v_next) * dt / 2
+    
+    return x
