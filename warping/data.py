@@ -89,7 +89,8 @@ class AlignedDataset(Dataset):
     def __init__(self,
                  emb_dict_lst: List[Dict],
                  is_cache: bool = True,
-                 seq_len: int = 0):
+                 seq_len: int = 0,
+                 is_from_start: bool = False):
         """Initializes an instance of AlignedDataset.
 
         Args:
@@ -97,11 +98,14 @@ class AlignedDataset(Dataset):
             is_cache: If True, caches the dataset.
             seq_len: The max sequence length to sample. If 0, preserves the whole
               sequence.
+            is_from_start: If True, always subsamples from the beginning of the
+              sequence.
         """
         super().__init__()
         self.emb_dict_lst = emb_dict_lst
         self.is_cache = is_cache
         self.seq_len = seq_len
+        self.is_from_start = is_from_start
 
         self.cached_samples = {}
     
@@ -181,7 +185,10 @@ class AlignedDataset(Dataset):
         deadpan_idx = dtw_path["deadpan"]
         expressive_idx = dtw_path["expressive"]
 
-        dtw_start = torch.randint(low=0, high=max(len(dtw_max_idx) - 64, 0), size=(1,))
+        if self.is_from_start:
+            dtw_start = 0
+        else:
+            dtw_start = torch.randint(low=0, high=max(len(dtw_max_idx) - 64, 0), size=(1,))
         dtw_end = (dtw_start + dtw_max_idx[dtw_start]) // 2
         dtw_end = torch.randint(low=dtw_end, high=dtw_max_idx[dtw_start] + 1, size=(1,))
 
