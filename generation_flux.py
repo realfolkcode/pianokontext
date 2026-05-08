@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from typing import List, Dict
 from copy import deepcopy
+from torch.utils.data import DataLoader
 import soundfile as sf
 
 from warping.utils import load_json, load_config, prepare_filepaths_from_aligned_metadata
@@ -54,9 +55,59 @@ def main(args):
                                                            split='validation')
     val_dataset = AlignedDataset(emb_dict_lst=val_dict_lst,
                                  is_cache=True,
-                                 seq_len=seq_len)
+                                 seq_len=seq_len,
+                                 is_from_start=True)
+
+    val_loader = DataLoader(val_dataset,
+                            batch_size=1,
+                            shuffle=False)
+
+    for sample in tqdm(val_dataset):
+        pass
+
+    t_space = torch.linspace(0, 1, num_steps + 1)[:-1].to(device)
 
     os.makedirs(output_dir, exist_ok=True)
+
+    gt_dir = os.path.join(output_dir, "groundtruth")
+    rec_dir = os.path.join(output_dir, "reconstruction")
+    os.makedirs(gt_dir, exist_ok=True)
+    os.makedirs(rec_dir, exist_ok=True)
+
+    for score_id, batch in tqdm(enumerate(val_loader)):
+        context = batch["deadpan"].to(device)
+        context = torch.cat(num_samples * [context])
+        context_mask = batch["deadpan_mask"].to(device)
+        context_mask = torch.cat(num_samples * [context_mask])
+
+        x_gt = batch["expressive"].to(device)
+        x_gt_mask = batch["expressive_mask"].to(device)
+
+        x_init = torch.randn_like(context)
+        x_init_mask = x_gt_mask.clone()
+        x_init_mask = torch.cat(num_samples * [x_init_mask])
+
+        x = solve_ode_flux(flux,
+                           x_init=x_init,
+                           x_init_mask=x_init_mask,
+                           time_grid=t_space,
+                           context=context,
+                           context_mask=context_mask)
+
+        out_score_dir = os.path.join(rec_dir, f"score_{score_id}")
+        os.makedirs(out_score_dir, exist_ok=True)
+        for i in range(len(x)):
+            audio = encdec.decode(x[i][x_init_mask[i]].T.to(device))
+            audio = audio.cpu().numpy()
+            output_path = os.path.join(out_score_dir, f"rec_{i}.mp3")
+            sf.write(output_path, audio.T, 44100)
+
+        out_score_dir = os.path.join(gt_dir, f"score_{score_id}")
+        os.makedirs(out_score_dir, exist_ok=True)
+        audio = encdec.decode(x_gt[x_gt_mask].T.to(device))
+        audio = audio.cpu().numpy()
+        output_path = os.path.join(out_score_dir, "gt.mp3")
+        sf.write(output_path, audio.T, 44100)
         
 
 if __name__ ==  "__main__":
