@@ -37,6 +37,7 @@ def main(args):
     weight_decay = config['train']['weight_decay']
     num_epochs = config['train']['num_epochs']
     is_ema = config['train']['is_ema']
+    save_every_epochs = config['train']['save_every_epochs']
 
     checkpoint_path = os.path.join(checkpoint_dir, f"{checkpoint_name}.pt")
     
@@ -101,7 +102,8 @@ def main(args):
                           checkpoint_path=checkpoint_path,
                           metrics_logger=metrics_logger)
     trainer.train(flux,
-                  ema=ema)
+                  ema=ema,
+                  save_every_epochs=save_every_epochs)
 
     if project_name is not None:
         exp.end()

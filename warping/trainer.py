@@ -477,15 +477,27 @@ class FluxTrainer:
         
         val_loss /= data_len
         return val_loss
+
+    def _save_model(self,
+                    out_path: str,
+                    model: nn.Module,
+                    ema: nn.Module | None = None):
+        checkpoint = {"model": model.state_dict()}
+        if ema is not None:
+            checkpoint["ema"] = ema.state_dict()
+        torch.save(checkpoint, out_path)
     
     def train(self,
               model: nn.Module,
-              ema: nn.Module | None = None):
+              ema: nn.Module | None = None,
+              save_every_epochs: int | None = None):
         """Trains a flow matching model.
         
         Args:
             model: Flow matching model.
             ema: EMA version of a model (optional).
+            save_every_epochs: Saves the model every specified number 
+              of epochs. (optional)
         """
         for i in tqdm(range(self.num_epochs)):
             train_loss = self._train_epoch(model=model,
@@ -505,10 +517,16 @@ class FluxTrainer:
                                     "val_loss": val_loss}
                     self.metrics_logger(logging_dict,
                                         epoch=i)
+            
+            if i != 0 and i % save_every_epochs == 0:
+                intermediate_ckpt_path = self.checkpoint_path.split('.')[0]
+                intermediate_ckpt_path = f"{intermediate_ckpt_path}_{i}.pt"
+                print(f"Saving the model into {intermediate_ckpt_path}")
+                self._save_model(out_path=intermediate_ckpt_path,
+                                 model=model,
+                                 ema=ema)
 
         print(f"Saving the model into {self.checkpoint_path}")
-        checkpoint = {"model": model.state_dict()}
-        if ema is not None:
-            checkpoint["ema"] = ema.state_dict()
-        if self.checkpoint_path is not None:
-            torch.save(checkpoint, self.checkpoint_path)
+        self._save_model(out_path=self.checkpoint_path,
+                         model=model,
+                         ema=ema)

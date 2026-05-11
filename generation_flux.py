@@ -22,7 +22,7 @@ def main(args):
     num_samples = args.num_samples
     num_steps = args.num_steps
     config_path = args.config_path
-    checkpoint_dir = args.checkpoint_dir
+    checkpoint_path = args.checkpoint_path
 
     config = load_config(config_path)
 
@@ -31,7 +31,6 @@ def main(args):
     checkpoint_name = config['model']['checkpoint_name']
     is_ema = config['train']['is_ema']
 
-    checkpoint_path = os.path.join(checkpoint_dir, f"{checkpoint_name}.pt")
     if is_ema:
         is_ema = "ema"
     else:
@@ -62,6 +61,7 @@ def main(args):
                             batch_size=1,
                             shuffle=False)
 
+    torch.manual_seed(42)
     for sample in tqdm(val_dataset):
         pass
 
@@ -117,7 +117,7 @@ if __name__ ==  "__main__":
     parser.add_argument('--num_samples', type=int, required=True, default=5, help='number of samples to generate')
     parser.add_argument('--num_steps', type=int, required=True, default=64, help='number of inference steps')
     parser.add_argument('--config_path', type=str, required=True, default=None, help='path to yaml config')  
-    parser.add_argument('--checkpoint_dir', type=str, required=True, default=None, help='directory to store checkpoints')
+    parser.add_argument('--checkpoint_path', type=str, required=True, default=None, help='path to checkpoint')
     
     args = parser.parse_args()
 
