@@ -97,10 +97,18 @@ def main(args):
         out_score_dir = os.path.join(rec_dir, f"score_{score_id}")
         os.makedirs(out_score_dir, exist_ok=True)
         for i in range(len(x)):
-            audio = encdec.decode(x[i][x_init_mask[i]].T.to(device))
+            # Mask out the EOS token
+            mask = x_init_mask[i]
+            latent_len = mask.sum()
+            mask[latent_len - 1] = False
+
+            audio = encdec.decode(x[i][mask].T.to(device))
             audio = audio.cpu().numpy()
             output_path = os.path.join(out_score_dir, f"rec_{i}.mp3")
             sf.write(output_path, audio.T, 44100)
+
+        latent_len = x_gt_mask.sum()
+        x_gt_mask[:, latent_len - 1] = False
 
         out_score_dir = os.path.join(gt_dir, f"score_{score_id}")
         os.makedirs(out_score_dir, exist_ok=True)

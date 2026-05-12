@@ -108,6 +108,8 @@ class Flux(nn.Module):
         """
         super().__init__()
 
+        self.eos_embedder = nn.Embedding(1, input_dim)
+
         self.projection = nn.Linear(input_dim, hidden_size, bias=True)
 
         if sum(rope_dim_lst) != hidden_size // num_heads:
@@ -178,6 +180,16 @@ class Flux(nn.Module):
         ids = prepare_ids(bs=x.shape[0],
                           seq_len=self.seq_len).to(x.device)
         pe = self.pe_embedder(ids)
+
+        eos_emb = torch.zeros((x.shape[0], 1)).int().to(x.device)
+        eos_emb = self.eos_embedder(eos_emb).squeeze()
+
+        batch_indices = torch.arange(x.shape[0], device=x.device)
+        context_eos_pos = context_mask.sum(1) - 1
+        context[batch_indices, context_eos_pos] = eos_emb
+
+        x_eos_pos = x_mask.sum(1) - 1
+        x[batch_indices, x_eos_pos] = eos_emb
                 
         context_seq_len = context.shape[1]
         x = torch.concat((context, x), dim=1)   # (B, 2 * seq_len, D)

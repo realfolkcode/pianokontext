@@ -189,7 +189,7 @@ def solve_ode_flux(model: nn.Module,
         context_mask: Mask for context of shape (B, seq_len).
     
     Returns:
-        Latent code of shape (B, seq_len, dim).
+        Latent code of shape (B, seq_len - 1, dim).
     """
     model.eval()
     x = x_init.clone()

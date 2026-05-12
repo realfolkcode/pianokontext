@@ -406,7 +406,7 @@ class FluxTrainer:
                    context=context,
                    context_mask=context_mask,
                    t=t)
-        loss = F.mse_loss(bt[x_mask], dtIt[x_mask])
+        loss = F.mse_loss(bt[x_mask][:, :-1], dtIt[x_mask][:, :-1])
         return loss
     
     def _train_epoch(self,
