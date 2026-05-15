@@ -71,10 +71,15 @@ def main(args):
 
     gt_dir = os.path.join(output_dir, "groundtruth")
     rec_dir = os.path.join(output_dir, "reconstruction")
+    deadpan_dir = os.path.join(output_dir, "deadpan")
     os.makedirs(gt_dir, exist_ok=True)
     os.makedirs(rec_dir, exist_ok=True)
 
+    batch_lst = []
     for score_id, batch in tqdm(enumerate(val_loader)):
+        batch_lst.append(batch)
+
+    for score_id, batch in tqdm(enumerate(batch_lst)):
         context = batch["deadpan"].to(device)
         context = torch.cat(num_samples * [context])
         context_mask = batch["deadpan_mask"].to(device)
@@ -107,6 +112,7 @@ def main(args):
             output_path = os.path.join(out_score_dir, f"rec_{i}.mp3")
             sf.write(output_path, audio.T, 44100)
 
+        # Export expressive audio
         latent_len = x_gt_mask.sum()
         x_gt_mask[:, latent_len - 1] = False
 
@@ -115,6 +121,19 @@ def main(args):
         audio = encdec.decode(x_gt[x_gt_mask].T.to(device))
         audio = audio.cpu().numpy()
         output_path = os.path.join(out_score_dir, "gt.mp3")
+        sf.write(output_path, audio.T, 44100)
+
+        # Export deadpan audio
+        latent_len = context_mask[0].sum()
+        context_mask[:, latent_len - 1] = False
+        context_mask = context_mask[0]
+        context = context[0]
+
+        out_score_dir = os.path.join(deadpan_dir, f"score_{score_id}")
+        os.makedirs(out_score_dir, exist_ok=True)
+        audio = encdec.decode(context[context_mask].T.to(device))
+        audio = audio.cpu().numpy()
+        output_path = os.path.join(out_score_dir, "deadpan.mp3")
         sf.write(output_path, audio.T, 44100)
         
 
