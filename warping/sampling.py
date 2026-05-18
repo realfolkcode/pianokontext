@@ -169,6 +169,60 @@ class DualBridge:
         return x1_rec
 
 
+class CFGBridge:
+    def __init__(self,
+                 model: nn.Module,
+                 interpolant: DeterministicInterpolant):
+        """Initializes an instance of DualBridge.
+        
+        Args:
+            model: Flow matching model.
+            interpolant: Flow interpolant.
+        """
+        self.model = model
+        self.interpolant = interpolant
+    
+    def translate_sample(self,
+                         x: torch.Tensor,
+                         y_source: torch.Tensor,
+                         y_target: torch.Tensor,
+                         cfg_source: float,
+                         cfg_target: float,
+                         num_steps: int) -> torch.Tensor:
+        """Translates sample from the source domain to the target domain.
+
+        Args:
+            x: Sample from the source domain of shape
+              (B, seq_len, D).
+            y_source: Batch of source labels of shape (B,).
+            y_target: Batch of target labels of shape (B,).
+            cfg_source: CFG strength for source.
+            cfg_target: CFG strength for target.
+            num_steps: The number of denoising steps.
+        
+        Returns:
+            Sample from the target domain of shape
+              (B, seq_len, D).
+        """
+        t_space = torch.linspace(1, 0, num_steps + 1)[:-1].to(x.device)
+        x0 = self.interpolant._normalize(x)
+        x0 = solve_ode(model=self.model,
+                       x_init=x0,
+                       time_grid=t_space,
+                       y=y_source,
+                       cfg_strength=cfg_source)
+    
+        t_space = torch.linspace(0, 1, num_steps + 1)[:-1].to(x.device)
+        x1_rec = solve_ode(model=self.model,
+                           x_init=x0,
+                           time_grid=t_space,
+                           y=y_target,
+                           cfg_strength=cfg_target)
+        x1_rec = self.interpolant._unnormalize(x1_rec)
+        
+        return x1_rec
+
+
 @torch.no_grad()
 def solve_ode_flux(model: nn.Module,
                    x_init: torch.Tensor,
