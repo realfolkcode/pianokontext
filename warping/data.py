@@ -12,7 +12,8 @@ class EmbeddingDataset(Dataset):
                  emb_dict_lst: List[Dict],
                  is_cache: bool = True,
                  seq_len: int = 0,
-                 label_mapping: Dict[str, int] | None = None):
+                 label_mapping: Dict[str, int] | None = None,
+                 is_from_start: bool = False):
         """Initializes an instance of EmbeddingDataset.
 
         Args:
@@ -21,12 +22,15 @@ class EmbeddingDataset(Dataset):
             seq_len: The sequence length to sample. If 0, preserves the whole
               sequence.
             label_mapping: Optional mapping from label names to label indices.
+            is_from_start: If True, always subsamples from the beginning of the
+              sequence.
         """
         super().__init__()
         self.emb_dict_lst = emb_dict_lst
         self.is_cache = is_cache
         self.seq_len = seq_len
         self.label_mapping = label_mapping
+        self.is_from_start = is_from_start
 
         self.cached_samples = {}
         self.cached_labels = {}
@@ -78,7 +82,10 @@ class EmbeddingDataset(Dataset):
             Embedding of shape (seq_len, D).
         """
         max_start_pos = len(sample) - self.seq_len
-        start_pos = torch.randint(low=0, high=max_start_pos + 1, size=(1,))
+        if self.is_from_start:
+            start_pos = 0
+        else:
+            start_pos = torch.randint(low=0, high=max_start_pos + 1, size=(1,))
         end_pos = start_pos + self.seq_len
 
         new_sample = deepcopy(sample)
