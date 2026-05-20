@@ -17,6 +17,7 @@ from warping.trainer import FluxTrainer, update_ema, requires_grad
 
 def main(args):
     metadata_path = args.metadata_path
+    stats_path = args.stats_path
     project_name = args.project_name
     config_path = args.config_path
     checkpoint_dir = args.checkpoint_dir
@@ -70,7 +71,7 @@ def main(args):
                             batch_size=batch_size,
                             shuffle=False)
     
-    data_stats = None
+    data_stats = load_json(stats_path)
     interpolant = DeterministicInterpolant(train_stats=data_stats,
                                            device=device)
 
@@ -112,6 +113,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--metadata_path', type=str, required=True, help='path to audio dataset metadata')
+    parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')
     parser.add_argument('--project_name', type=str, required=False, default=None, help='wandb project name')
     parser.add_argument('--config_path', type=str, required=True, default=None, help='path to yaml config')
     parser.add_argument('--checkpoint_dir', type=str, required=True, default=None, help='directory to store checkpoints')
