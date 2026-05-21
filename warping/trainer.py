@@ -401,6 +401,8 @@ class FluxTrainer:
         It = self.interpolant.xt(x0, x1, t)
         dtIt = self.interpolant.dtxt(x0, x1, t)
 
+        context = self.interpolant._normalize(context)
+
         bt = model(x=It,
                    x_mask=x_mask,
                    context=context,

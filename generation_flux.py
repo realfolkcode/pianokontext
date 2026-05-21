@@ -18,6 +18,7 @@ from warping.data import AlignedDataset
 
 def main(args):
     metadata_path = args.metadata_path
+    stats_path = args.stats_path
     output_dir = args.output_dir
     num_samples = args.num_samples
     num_steps = args.num_steps
@@ -38,7 +39,7 @@ def main(args):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    data_stats = None
+    data_stats = load_json(stats_path)
     interpolant = DeterministicInterpolant(train_stats=data_stats,
                                            device=device)
 
@@ -92,12 +93,14 @@ def main(args):
         x_init_mask = x_gt_mask.clone()
         x_init_mask = torch.cat(num_samples * [x_init_mask])
 
+        context_normalized = interpolant._normalize(context)
         x = solve_ode_flux(flux,
                            x_init=x_init,
                            x_init_mask=x_init_mask,
                            time_grid=t_space,
-                           context=context,
+                           context=context_normalized,
                            context_mask=context_mask)
+        x = interpolant._unnormalize(x)
 
         out_score_dir = os.path.join(rec_dir, f"score_{score_id}")
         os.makedirs(out_score_dir, exist_ok=True)
@@ -140,6 +143,7 @@ def main(args):
 if __name__ ==  "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--metadata_path', type=str, required=True, help='path to audio dataset metadata')
+    parser.add_argument('--stats_path', type=str, required=True, help='path to dataset embedding statistics')
     parser.add_argument('--output_dir', type=str, required=True, help='directory to store generated samples')
     parser.add_argument('--num_samples', type=int, required=True, default=5, help='number of samples to generate')
     parser.add_argument('--num_steps', type=int, required=True, default=64, help='number of inference steps')
