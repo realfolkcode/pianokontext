@@ -62,7 +62,7 @@ def main(args):
 
     metadata = load_json(metadata_path)
     aligned_dict_lst = prepare_filepaths_from_aligned_metadata(metadata,
-                                                               split='validation')
+                                                               split='test')
     val_dict_lst = []
     for aligned_dict in aligned_dict_lst:
         emb_dict = {}

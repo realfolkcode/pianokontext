@@ -1,0 +1,6 @@
+music2latent
+transkun
+codicodec
+dtaidistance
+timm>=1.0.15
+parangonar>=3.3.0

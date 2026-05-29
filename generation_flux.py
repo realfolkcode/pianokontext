@@ -52,7 +52,7 @@ def main(args):
 
     metadata = load_json(metadata_path)
     val_dict_lst = prepare_filepaths_from_aligned_metadata(metadata,
-                                                           split='validation')
+                                                           split='test')
     val_dataset = AlignedDataset(emb_dict_lst=val_dict_lst,
                                  is_cache=True,
                                  seq_len=seq_len,
