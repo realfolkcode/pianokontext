@@ -17,8 +17,8 @@ wandb/
 #tokenizers/
 toy_data/
 wip_notebooks/
+wip_configs/
 checkpoints/
-configs/
 tmp_gradio/
 figures/
 audio_examples/

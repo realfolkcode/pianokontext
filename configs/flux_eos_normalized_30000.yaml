@@ -1,0 +1,19 @@
+data:
+  batch_size: 128
+  input_dim: 64
+
+model:
+  seq_len: 128
+  hidden_size: 512
+  num_blocks: 8
+  num_heads: 8
+  rope_dim_lst: [16, 48]
+  mlp_ratio: 1.0
+  checkpoint_name: "flux_eos_normalized_30000"
+
+train:
+  num_epochs: 30000
+  lr: 0.0005
+  weight_decay: 0.01
+  is_ema: true
+  save_every_epochs: 10000
