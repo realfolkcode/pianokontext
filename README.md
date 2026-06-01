@@ -1,3 +1,5 @@
-# Experiments with Latent Performance Generation
+# PianoKontext: Expressive Performance Rendering from Deadpan Context
 
-Some preliminary experiments using Music2Latent and CoDiCodec
+## Installation
+
+This repository requires Python 3.10 or greater.
