@@ -10,3 +10,8 @@ pip install -r requirements.txt
 ```
 
 For training, you might need to install additional packages.
+
+## Acknowledgements
+
+- [FLUX Kontext](https://github.com/black-forest-labs/flux/tree/main/src/flux) for implementation details
+- [KAD toolkit](https://github.com/YoonjinXD/kadtk/tree/main/kadtk) for evaluation metrics implementation
