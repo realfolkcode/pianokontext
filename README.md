@@ -10,6 +10,12 @@ PianoKontext is a proof-of-concept model for **variable-length** expressive rend
 
 Inspired by FLUX Kontext, PianoKontext is a flow matching model trained in the latent space of Music2Latent that enables contextual learning of score-performance dependencies solely through self-attention. Currently, it operates on segments up to 11 seconds.
 
+**Try it on Google Colab!**
+
+<a target="_blank" href="https://colab.research.google.com/drive/1cKoKdoRKZd89gvBsnhYdsxyKsR-bS9QP?usp=sharing">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 ## Installation
 
 This repository requires Python 3.10 or greater.
@@ -22,6 +28,8 @@ pip install -r requirements.txt
 For training, you might need to install additional packages.
 
 ## Data preparation and training
+
+More details will be added soon
 
 1. Download the [MAESTRO](https://magenta.withgoogle.com/datasets/maestro) and [ASAP](https://github.com/fosfrancesco/asap-dataset) datasets.
 2. Install [fluidsynth](https://www.fluidsynth.org/) and a piano soundfont. Synthesize ASAP from MIDI to audio using the `synthesize_asap.py` script.
