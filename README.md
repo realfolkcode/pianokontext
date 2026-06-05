@@ -1,5 +1,15 @@
 # PianoKontext: Expressive Performance Rendering from Deadpan Context
 
+Accepted at the ICML 2026 Workshop on Machine Learning for Audio
+
+Link to the paper will be added soon
+
+## What is PianoKontext?
+
+PianoKontext is a proof-of-concept model for **variable-length** expressive rendering of classial piano music. Given a deadpan audio synthesized from a MIDI score, it generates various expressive audios with different timings and dynamics. 
+
+Inspired by FLUX Kontext, PianoKontext is a flow matching model trained in the latent space of Music2Latent that enables contextual learning of score-performance dependencies solely through self-attention. Currently, it operates on segments up to 11 seconds.
+
 ## Installation
 
 This repository requires Python 3.10 or greater.
@@ -10,10 +20,6 @@ pip install -r requirements.txt
 ```
 
 For training, you might need to install additional packages.
-
-## Inference
-
-The Colab notebook with an example of inference will be added soon
 
 ## Data preparation and training
 
