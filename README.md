@@ -4,6 +4,8 @@ Accepted at the ICML 2026 Workshop on Machine Learning for Audio
 
 Link to the paper will be added soon
 
+[![Demo page with audio examples](https://img.shields.io/badge/Website-Demo-2563eb)](https://anon-pianokontext.github.io/)
+
 ## What is PianoKontext?
 
 PianoKontext is a proof-of-concept model for **variable-length** expressive rendering of classial piano music. Given a deadpan audio synthesized from a MIDI score, it generates various expressive audios with different timings and dynamics. 
