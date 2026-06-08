@@ -27,9 +27,7 @@ def main(args):
 
     config = load_config(config_path)
 
-    batch_size = config['data']['batch_size']
     seq_len = config['model']['seq_len']
-    checkpoint_name = config['model']['checkpoint_name']
     is_ema = config['train']['is_ema']
 
     if is_ema:
