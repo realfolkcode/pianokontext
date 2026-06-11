@@ -2,9 +2,8 @@
 
 Accepted at the ICML 2026 Workshop on Machine Learning for Audio
 
-Link to the paper will be added soon
-
-[![Demo page with audio examples](https://img.shields.io/badge/Website-Demo-2563eb)](https://realfolkcode.github.io/pianokontext_demo)
+> [![arXiv](https://img.shields.io/badge/arXiv-2511.03425-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2511.03425)
+> [![Demo page with audio examples](https://img.shields.io/badge/Website-Demo-2563eb)](https://realfolkcode.github.io/pianokontext_demo)
 
 ## What is PianoKontext?
 
