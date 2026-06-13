@@ -4,6 +4,9 @@ Accepted at the ICML 2026 Workshop on Machine Learning for Audio
 
 > [![arXiv](https://img.shields.io/badge/arXiv-2511.03425-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2606.12282)
 > [![Demo page with audio examples](https://img.shields.io/badge/Website-Demo-2563eb)](https://realfolkcode.github.io/pianokontext_demo)
+> [![Colab notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1cKoKdoRKZd89gvBsnhYdsxyKsR-bS9QP?usp=sharing)
+
+![image](scheme.png)
 
 ## What is PianoKontext?
 
